@@ -1,0 +1,50 @@
+Resources:
+  FrontendEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !Ref FrontendInstanceSecurityGroup
+      KeyName: termproject
+      ImageId: ami-0f34c5ae932e6f0e4  # Replace with a valid AMI ID for your desired region
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y git python3 python3-pip
+          # Clone the Git repository containing your Flask application
+          git clone https://gitlab-ci-token:glpat-j79FqF1yAwsxa3RoMee3@git.cs.dal.ca/soudaboina/cloudterm.git /home/ec2-user/app
+          sudo chown -R ec2-user:ec2-user /home/ec2-user/app
+
+          echo "API_GATEWAY_URL=${ApiGateway}" >> /home/ec2-user/app/.env
+          # Navigate to the cloned repository directory
+          cd /home/ec2-user/app
+
+          # Install any dependencies specified in requirements.txt (if applicable)
+          pip3 install -r requirements.txt
+
+          # Run the Flask application
+          python3 app.py
+
+  FrontendInstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for the frontend EC2 instance
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5000
+
+Outputs:
+  FrontendURL:
+    Value: !Join ['', ['http://', !GetAtt FrontendEC2Instance.PublicIp]]
+    Description: URL to access the frontend application

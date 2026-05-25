@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation template for your application.
+
+Resources:
+  # DynamoDB Table for the Account
+  AccountDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: accountdata2
+      AttributeDefinitions:
+        - AttributeName: username
+          AttributeType: S
+      KeySchema:
+        - AttributeName: username
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  # DynamoDB Table for the User
+  UserDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: userdata2
+      AttributeDefinitions:
+        - AttributeName: username
+          AttributeType: S
+      KeySchema:
+        - AttributeName: username
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  # Custom resource to insert data into the UserDynamoDBTable
+  # InsertUserData:
+  #   Type: Custom::InsertUserData
+  #   Properties:
+  #     ServiceToken: !GetAtt InsertUserDataFunction.Arn
+  #     TableName: !Ref UserDynamoDBTable
+  #     # Item:
+  #     #   username: "admin"
+  #     #   password: "momo"
+
+  # # Custom resource to insert data into the AccountDynamoDBTable
+  # InsertAccountData:
+  #   Type: Custom::InsertAccountData
+  #   Properties:
+  #     ServiceToken: !GetAtt InsertAccountDataFunction.Arn
+  #     TableName: !Ref AccountDynamoDBTable
+      # Item:
+      #   username: "admin"
+      #   amount: 1000
+      #   name: "chequing"
+
+  # Lambda function to handle inserting data into UserDynamoDBTable
+  InsertUserDataFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: InsertUserData3Function
+      Runtime: python3.10
+      Handler: index.lambda_handler
+      Role: "arn:aws:iam::602482018691:role/LabRole"
+      Code:
+        ZipFile: |
+          import boto3
+          def lambda_handler(event, context):
+            dynamodb = boto3.resource('dynamodb')
+            table = dynamodb.Table('userdata2')
+            table.put_item(Item={"username":"admin","password":"momo"})
+
+  # Lambda function to handle inserting data into AccountDynamoDBTable
+  InsertAccountDataFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: InsertAccountData3Function
+      Runtime: python3.10
+      Handler: index.lambda_handler
+      Role: "arn:aws:iam::602482018691:role/LabRole"
+      Code:
+        ZipFile: |
+          import boto3
+          def lambda_handler(event, context):
+            dynamodb = boto3.resource('dynamodb')
+            table = dynamodb.Table('accountdata2')
+            table.put_item(Item={"username":"admin","amount":"1000","name":"chequing"})
+    # Wait condition handle
+  WaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  # # Wait condition to wait for the data insertion
+  # WaitCondition:
+  #   Type: AWS::CloudFormation::WaitCondition
+  #   DependsOn:
+  #     - InsertUserData
+  #     - InsertAccountData
+  #   Properties:
+  #     Handle: !Ref WaitHandle
+  #     Timeout: '300'  # Set an appropriate timeout in seconds
+
+# Outputs:
+#   StackStatus:
+#     Value: !Ref AWS::StackStatus

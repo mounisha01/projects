@@ -1,0 +1,384 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation template for your application.
+Parameters:
+  S3BucketArn:
+    Type: String
+    Description: ARN of the S3 bucket to trigger the Lambda function
+Resources:
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: chequesbucket-02345
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - "PUT"
+              - "POST"
+              - "DELETE"
+              - "GET"
+            AllowedOrigins:
+              - "*"
+            MaxAge: 300 # Allowing public access for demonstration purposes. You may want to configure this securely in a real application.
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt UploadAndProcessLambdaFunction.Arn
+#   # DynamoDB Tables
+  # AccountDynamoDBTable:
+  #   Type: AWS::DynamoDB::Table
+  #   Properties:
+  #     TableName: account
+  #     AttributeDefinitions:
+  #       - AttributeName: username
+  #         AttributeType: S
+  #     KeySchema:
+  #       - AttributeName: username
+  #         KeyType: HASH
+  #     ProvisionedThroughput:
+  #       ReadCapacityUnits: 5
+  #       WriteCapacityUnits: 5
+  #     # Initial data to be inserted into the AccountDynamoDBTable
+  #     Items:
+  #       - username: "admin"
+  #         password: "momo"
+  #         amount: 1000
+  #         name: "chequing"
+
+  # # DynamoDB Table for the User
+  # UserDynamoDBTable:
+  #   Type: AWS::DynamoDB::Table
+  #   Properties:
+  #     TableName: user
+  #     AttributeDefinitions:
+  #       - AttributeName: username
+  #         AttributeType: S
+  #     KeySchema:
+  #       - AttributeName: username
+  #         KeyType: HASH
+  #     ProvisionedThroughput:
+  #       ReadCapacityUnits: 5
+  #       WriteCapacityUnits: 5
+  #     # Initial data to be inserted into the UserDynamoDBTable
+  #     Items:
+  #       - username: "admin"
+  #         password: "momo"
+  # IAM Role for Lambda functions
+    # LambdaExecutionRole:
+    #   Type: AWS::IAM::Role
+    #   Properties:
+    #     AssumeRolePolicyDocument:
+    #       Version: "2012-10-17"
+    #       Statement:
+    #         - Effect: Allow
+    #           Principal:
+    #             Service: lambda.amazonaws.com
+    #           Action: sts:AssumeRole
+    #     Policies:
+    #       - PolicyName: LambdaPermissions
+    #         PolicyDocument:
+    #           Version: "2012-10-17"
+    #           Statement:
+    #             - Effect: Allow
+    #               Action: 
+    #                 - logs:CreateLogGroup
+    #                 - logs:CreateLogStream
+    #                 - logs:PutLogEvents
+    #               Resource: arn:aws:logs:*:*:*
+
+    # Lambda Function - LoginLambda
+    # LoginLambdaFunction:
+    #   Type: AWS::Lambda::Function
+    #   Properties:
+    #     FunctionName: LoginLambda
+    #     Runtime: python3.10
+    #     Handler: LoginLambda.lambda_handler
+    #     Role: "arn:aws:iam::602482018691:role/LabRole"
+    #     Code:
+    #       # S3Bucket: chequesbucket-0234
+    #       ZipFile: |
+    #         # Add your Python code for LoginLambda here
+    #         # login_lambda.py
+    #         import boto3
+    #         import json
+
+    #         def lambda_handler(event, context):
+    #             try:
+    #                 # Assuming you have a DynamoDB table named 'Users'
+    #                 dynamodb = boto3.resource('dynamodb')
+    #                 table = dynamodb.Table('user')
+
+    #                 # Retrieve username and password from the event
+    #                 username = event['username']
+    #                 password = event['password']
+
+    #                 # Query the DynamoDB table to check if the user exists and the password is correct
+    #                 response = table.get_item(Key={'username': username})
+
+    #                 if 'Item' in response:
+    #                     user_data = response['Item']
+    #                     if user_data['password'] == password:
+    #                         return {
+    #                             'statusCode': 200,
+    #                             'body': json.dumps({'message': 'Login successful!'})}
+    #                 return {
+    #                     'statusCode': 401,
+    #                     'body': json.dumps({'message': 'Invalid credentials'})}
+
+    #             except Exception as e:
+    #                 return {
+    #                     'statusCode': 500,
+    #                     'body': json.dumps({'message': 'Internal Server Error'})}
+
+    #     Environment:
+    #       Variables:
+    #         DYNAMODB_TABLE_NAME:
+    #           Ref: DynamoDBTable
+
+  # # Lambda Function - HomeLambda
+  # HomeLambdaFunction:
+  #   Type: AWS::Lambda::Function
+  #   Properties:
+  #     FunctionName: HomeLambda
+  #     Runtime: python3.10
+  #     Handler: lambda_function.lambda_handler
+  #     Role: "arn:aws:iam::602482018691:role/LabRole"
+  #     Code:
+  #       ZipFile: |
+  #         # Add your Python code for HomeLambda here
+  #         # Python Lambda function to fetch account details and name from DynamoDB
+  #         import json
+  #         import boto3
+
+  #         dynamodb = boto3.resource('dynamodb')
+  #         table = dynamodb.Table('account')  # Replace 'YourTableName' with your actual DynamoDB table name
+
+  #         def get_account_details(event, context):
+  #             # Assuming you have the username in the 'username' field of the event
+  #             username = event['queryStringParameters']['username']
+
+  #             # Retrieve the item from DynamoDB based on the username
+  #             response = table.get_item(Key={'username': username})
+
+  #             if 'Item' in response:
+  #                 item = response['Item']
+  #                 account_details = item.get('account_details', 'N/A')
+  #                 name = item.get('name', 'N/A')
+  #                 return {
+  #                     'statusCode': 200,
+  #                     'body': json.dumps({
+  #                         'account_details': account_details,
+  #                         'name': name
+  #                     })
+  #                 }
+  #             else:
+  #                 return {
+  #                     'statusCode': 404,
+  #                     'body': json.dumps({'message': 'User not found'})
+  #                 }
+
+  # SNS Topic to send email notifications
+  UploadAndProcessSNSTopic:
+    Type: AWS::SNS::Topic
+
+  # SNS Topic Subscription (Email Subscriber)
+  UploadAndProcessSNSTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: mn660371@dal.ca  # Replace with the email you want to subscribe
+      Protocol: email
+      TopicArn: !Ref UploadAndProcessSNSTopic
+
+ 
+
+  # Lambda Function - UploadAndProcess
+  UploadAndProcessLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: UploadAndProcess3Lambda
+      Runtime: python3.10  # Replace with your desired runtime
+      Handler: index.lambda_handler  # Replace with your Python file and handler name
+      Role: "arn:aws:iam::602482018691:role/LabRole"
+      Code:
+        ZipFile: |
+          # Add your Python code for UploadAndProcessLambda here
+          import boto3
+          import re
+          import json
+
+          def extract_text_from_image(image_bucket, image_filename):
+              s3 = boto3.client('s3')
+              response = s3.get_object(Bucket=image_bucket, Key=image_filename)
+              image_content = response['Body'].read()
+
+              textract = boto3.client('textract')
+              response = textract.detect_document_text(Document={'Bytes': image_content})
+              extracted_text = '\n'.join([item.get('Text','') for item in response['Blocks'] if item['BlockType'] == 'WORD'])
+              return extracted_text
+
+          def process_extracted_text(extracted_text):
+              amount_pattern = r'\*\*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\*\*'
+              name_pattern = r'\*\*([^\*]+)'
+
+              amount_match = re.search(amount_pattern, extracted_text)
+              extracted_amount = amount_match.group(1).replace(',', '') if amount_match else None
+
+              name_match = re.search(name_pattern, extracted_text)
+              Nameonthecheque = name_match.group(1).replace(' ', '\n') if name_match else None
+
+              return extracted_amount, Nameonthecheque
+
+          def update_user_account(username, extracted_amount):
+              dynamodb = boto3.resource('dynamodb')
+              table = dynamodb.Table('account')
+              
+              response = table.get_item(Key={'username': username})
+              balance = response.get('Item', {})
+
+              # Update the account balance based on the extracted amount
+              balance['amount'] = str(int(balance.get('amount', 0)) + int(float(extracted_amount)))
+
+              # Save the updated account information back to DynamoDB
+              table.put_item(Item=balance)
+
+          def lambda_handler(event, context):
+              # Assuming the event contains the S3 bucket and filename for the uploaded image
+              print(len(event['Records']))
+              image_bucket = event['Records'][0]['s3']['bucket']['name']
+              image_filename = event['Records'][0]['s3']['object']['key']
+              # print(bucket_name,s3_key)
+
+              # Extract text from the image using Textract
+              extracted_text = extract_text_from_image(image_bucket, image_filename)
+
+              # Process the extracted text to get the amount and user name
+              extracted_amount, name = process_extracted_text(extracted_text)
+
+              # Assuming you have the username in the 'username' field of the event
+              username = "admin"
+
+              # Update the user's account with the extracted amount
+              update_user_account(username, extracted_amount)
+
+              # Send an SNS notification to the user about the account update
+              sns = boto3.client('sns')
+              topic_arn =  os.environ['SNS_TOPIC_ARN']
+              message = f"Dear {name}, A check has been deposited succuessfully of {extracted_amount}."
+              sns.publish(TopicArn=topic_arn, Message=message)
+
+              return {
+                  "statusCode": 200,
+                  "body": json.dumps({
+                      "message": "Cheque processed successfully.",
+                      "account_details": extracted_amount,
+                      "name": name
+                  })
+              }
+      # EventSourceMappings:
+      #   - EventSourceArn: "arn:aws:s3:::chequesbucket-01234"  # Use the ARN of the S3 bucket to trigger the Lambda function
+      #     BatchSize: 1
+      #     StartingPosition: LATEST
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN:
+            Ref: UploadAndProcessSNSTopic
+
+  UploadAndProcessLambdaS3Trigger:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt UploadAndProcessLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: "arn:aws:s3:::chequesbucket-02345"
+
+  SnsTopic:
+    Type: AWS::SNS::Topic
+
+  SnsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: mn660371@dal.ca
+      Protocol: email
+      TopicArn: !Ref SnsTopic
+
+  # S3 Bucket Trigger for UploadAndProcessLambda (Assuming the Lambda function is named UploadAndProcessLambda)
+  S3BucketTrigger:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt ChequesBucket.Arn
+      FunctionName: !Ref UploadAndProcessLambda
+
+
+  # API Gateway
+  # APIGateway:
+  #   Type: AWS::ApiGateway::RestApi
+  #   Properties:
+  #     Name: YourAPIGateway
+
+  # # API Gateway Resources and Methods for LoginLambda
+  # APIGatewayLoginResource:
+  #   Type: AWS::ApiGateway::Resource
+  #   Properties:
+  #     RestApiId: !Ref APIGateway
+  #     ParentId: !GetAtt APIGateway.RootResourceId
+  #     PathPart: login
+
+  # APIGatewayLoginMethod:
+  #   Type: AWS::ApiGateway::Method
+  #   Properties:
+  #     RestApiId: !Ref APIGateway
+  #     ResourceId: !Ref APIGatewayLoginResource
+  #     HttpMethod: POST
+  #     AuthorizationType: NONE
+  #     Integration:
+  #       Type: AWS_PROXY
+  #       IntegrationHttpMethod: POST
+  #       Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LoginLambdaFunction.Arn}/invocations
+
+#   # API Gateway Resources and Methods for HomeLambda
+#   APIGatewayHomeResource:
+#     Type: AWS::ApiGateway::Resource
+#     Properties:
+#       RestApiId: !Ref APIGateway
+#       ParentId: !GetAtt APIGateway.RootResourceId
+#       PathPart: home
+
+#   APIGatewayHomeMethod:
+#     Type: AWS::ApiGateway::Method
+#     Properties:
+#       RestApiId: !Ref APIGateway
+#       ResourceId: !Ref APIGatewayHomeResource
+#       HttpMethod: POST
+#       AuthorizationType: NONE
+#       Integration:
+#         Type: AWS_PROXY
+#         IntegrationHttpMethod: POST
+#         Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HomeLambdaFunction.Arn}/invocations
+
+  # SNS Topic and Subscription
+  SnsTopic:
+    Type: AWS::SNS::Topic
+
+  SnsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: mn660371@dal.ca
+      Protocol: email
+      TopicArn: !Ref SnsTopic
+
+  # S3 Bucket Trigger for UploadAndProcessLambda (Assuming the Lambda function is named UploadAndProcessLambda)
+  S3BucketTrigger:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt ChequesBucket.Arn
+      FunctionName: !Ref UploadAndProcessLambda
+
+# Outputs:
+#   # You can add any outputs you need here, e.g., API Gateway endpoint URLs.

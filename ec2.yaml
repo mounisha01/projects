@@ -1,0 +1,209 @@
+Resources:
+  # FrontendBucket:
+  #   Type: AWS::S3::Bucket
+
+  # FrontendBucketPolicy:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties:
+  #     Bucket: !Ref FrontendBucket
+  #     PolicyDocument:
+  #       Statement:
+  #         - Sid: AllowPublicRead
+  #           Effect: Allow
+  #           Principal: "*"
+  #           Action: s3:GetObject
+  #           Resource: !Join ["/", [!GetAtt FrontendBucket.Arn, "frontend", "templates", "*"]]
+
+  FrontendEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !Ref FrontendInstanceSecurityGroup
+      KeyName: termproject
+      ImageId: ami-0f34c5ae932e6f0e4
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y python3 python3-pip
+
+          # Install Flask and other packages
+          pip3 install Flask
+          pip3 install boto3
+          pip3 install requests
+
+          # Create directories for the Flask application
+          mkdir -p /home/ec2-user/templates
+          # mkdir -p /home/ec2-user
+
+          # Sync frontend files from S3 bucket to /home/ec2-user/templates
+          aws s3 cp s3://frontendbucketec2/templates /home/ec2-user/templates
+
+          # Copy app.py from S3 bucket to /home/ec2-user/
+          aws s3 cp s3://frontendbucketec2/app.py /home/ec2-user/
+
+          # Change to the application directory
+          cd /home/ec2-user
+          python3 app.py
+
+  FrontendInstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for the frontend EC2 instance
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+
+Outputs:
+  FrontendURL:
+    Value: !Join ['', ['http://', !GetAtt FrontendEC2Instance.PublicIp]]
+    Description: URL to access the frontend application
+
+# Resources:
+#   # FrontendBucket:
+#   #   Type: AWS::S3::Bucket
+
+#   # FrontendBucketPolicy:
+#   #   Type: AWS::S3::BucketPolicy
+#   #   Properties:
+#   #     Bucket: !Ref FrontendBucket
+#   #     PolicyDocument:
+#   #       Statement:
+#   #         - Sid: AllowPublicRead
+#   #           Effect: Allow
+#   #           Principal: "*"
+#   #           Action: s3:GetObject
+#   #           Resource: !Join ["/", [!GetAtt FrontendBucket.Arn, "frontend", "templates", "*"]]
+#   # FrontendBucket:
+#   #   Type: AWS::S3::Bucket
+#   # FrontendBucketPolicy:
+#   #   Type: AWS::S3::BucketPolicy
+#   #   # Properties:
+#   #   #   Bucket: !Ref FrontendBucket
+#   #   Properties:
+#   #     BucketName: frontendbucketec2
+#   #     # PublicAccessBlockConfiguration:
+#   #     #   BlockPublicAcls: false
+#   #     #   BlockPublicPolicy: false
+#   #     #   IgnorePublicAcls: false
+#   #     #   RestrictPublicBuckets: false
+#   #     CorsConfiguration:
+#   #       CorsRules:
+#   #         - AllowedHeaders:
+#   #             - "*"
+#   #           AllowedMethods:
+#   #             - "PUT"
+#   #             - "POST"
+#   #             - "DELETE"
+#   #             - "GET"
+#   #           AllowedOrigins:
+#   #             - "*"
+#   #           MaxAge: 300
+#   #     PolicyDocument:
+#   #       Statement:
+#   #         - Sid: AllowPublicRead
+#   #           Effect: Allow
+#   #           Principal: "*"
+#   #           Action: s3:GetObject
+#   #           Resource: !Join ["/", [!GetAtt FrontendBucket.Arn, "templates", "*"]]
+
+#   # FrontendEC2Instance:
+#   #   Type: AWS::EC2::Instance
+#   #   Properties:
+#   #     InstanceType: t2.micro  # Replace with your desired instance type
+#   #     SecurityGroups:
+#   #       - !Ref FrontendInstanceSecurityGroup
+#   #     KeyName: termproject  # Replace with your EC2 key pair
+#   #     ImageId: ami-0f34c5ae932e6f0e4
+#   #     UserData:
+#   #       Fn::Base64: !Sub |
+#   #         #!/bin/bash
+#   #         # Install required packages
+#   #         sudo yum update -y
+#   #         sudo yum install -y python3
+#   #         sudo pip3 install Flask
+
+#   #         # Install AWS CLI
+#   #         sudo yum install -y awscli
+
+#   #         sudo pip3 install boto3
+#   #         sudo pip3 install requests
+
+#   #         # Create directories for the Flask application
+#   #         sudo mkdir -p /home/ec2-user/templates
+#   #         sudo mkdir -p /home/ec2-user
+
+#   #         # Sync frontend files from S3 bucket to /var/www/html/templates
+#   #         aws s3 sync s3://frontendbucketec2/templates /home/ec2-user/templates
+
+#   #         # Copy app.py from S3 bucket to /home/ec2-user/
+#   #         aws s3 cp s3://frontendbucketec2/app.py /home/ec2-user/
+
+#   #         # Change to the application directory
+#   #         cd /home/ec2-user
+#   #         python3 app.py
+#   FrontendEC2Instance:
+#     Type: AWS::EC2::Instance
+#     Properties:
+#       InstanceType: t2.micro  # Replace with your desired instance type
+#       SecurityGroups:
+#         - !Ref FrontendInstanceSecurityGroup
+#       KeyName: termproject  # Replace with your EC2 key pair
+#       ImageId: ami-0f34c5ae932e6f0e4  # Replace with a valid AMI ID for your desired region
+#       UserData:
+#         Fn::Base64: !Sub |
+#           #!/bin/bash
+#           # Install required packages
+#           yum update -y
+#           yum install -y python3
+#           yum install -y python3-pip
+#           pip3 install Flask
+
+#           # Install AWS CLI
+#           yum install -y awscli
+
+#           # Install other necessary packages
+#           pip3 install boto3
+#           pip3 install requests
+
+#           # Create directories for the Flask application
+#           # mkdir -p /home/ec2-user/templates
+#           mkdir -p /home/ec2-user
+
+#           # Sync frontend files from existing S3 bucket to /home/ec2-user/templates
+#           aws s3 sync s3://frontendbucketec2/templates /home/ec2-user/templates
+
+#           # Copy app.py from existing S3 bucket to /home/ec2-user/
+#           aws s3 cp s3://frontendbucketec2/app.py /home/ec2-user/
+
+#           # Change to the application directory
+#           cd /home/ec2-user
+#           python3 app.py
+#   FrontendInstanceSecurityGroup:
+#     Type: AWS::EC2::SecurityGroup
+#     Properties:
+#       GroupDescription: Security group for the frontend EC2 instance
+#       SecurityGroupIngress:
+#         - CidrIp: 0.0.0.0/0
+#           IpProtocol: tcp
+#           FromPort: 80
+#           ToPort: 80
+#         - CidrIp: 0.0.0.0/0
+#           IpProtocol: tcp
+#           FromPort: 22  # Allow SSH access
+#           ToPort: 22
+#       # Add other security group configurations as needed
+
+#       # Add other security group configurations as needed
+
+# Outputs:
+#   FrontendURL:
+#     Value: !Join ['', ['http://', !GetAtt FrontendEC2Instance.PublicIp]]
+#     Description: URL to access the frontend application
